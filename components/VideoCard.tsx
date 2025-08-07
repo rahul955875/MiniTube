@@ -1,31 +1,38 @@
 "use client";
 
+import Link from "next/link";
 import { Grid, Card, CardMedia, CardContent, Typography } from "@mui/material";
+import { Video } from "@/types/videos";
+import { adaptYouTubeVideo } from "@/adapters/youtubeAdapter";
 
-const VideoCard = ({ videos }: { videos: any[] }) => {
-  console.log(videos);
+const VideoCard = ({ videos }: { videos: Video[] }) => {
   return (
     <Grid container spacing={2}>
-      {videos &&
-        videos.map((video, index) => (
-          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={video.id + index}>
-            <Card>
-              <CardMedia
-                component="img"
-                image={video.snippet.thumbnails.medium.url}
-                alt={video.snippet.title}
-              />
-              <CardContent>
-                <Typography variant="subtitle1">
-                  {video.snippet.title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {video.snippet.channelTitle}
-                </Typography>
-              </CardContent>
-            </Card>
+      {videos?.map((video) => {
+        const {
+          id,
+          title,
+          description,
+          thumbnailUrl,
+          channelTitle,
+          publishedAt,
+        } = adaptYouTubeVideo(video);
+        return (
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={id+title}>
+            <Link href={`/watch/${id}`} style={{ textDecoration: "none" }}>
+              <Card sx={{ height: "100%", cursor: "pointer" }}>
+                <CardMedia component="img" image={thumbnailUrl} alt={title} />
+                <CardContent>
+                  <Typography variant="subtitle1">{title}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {channelTitle}  
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Link>
           </Grid>
-        ))}
+        );
+      })}
     </Grid>
   );
 };

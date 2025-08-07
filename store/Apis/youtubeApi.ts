@@ -11,13 +11,13 @@ export const youtubeApi = createApi({
   endpoints: (builder) => ({
     getTrendingVideos: builder.query<any, { pageToken?: string }>({
       query: ({ pageToken }) =>
-        `videos?part=snippet&chart=mostPopular&maxResults=12&regionCode=IN&key=${YOUTUBE_API_KEY}${
+        `videos?part=snippet&chart=mostPopular&maxResults=1&regionCode=IN&key=${YOUTUBE_API_KEY}${
           pageToken ? `&pageToken=${pageToken}` : ""
         }`,
     }),
     searchVideos: builder.query<any, { query: string; pageToken?: string }>({
       query: ({ query, pageToken }) =>
-        `search?part=snippet&type=video&maxResults=12&q=${encodeURIComponent(
+        `search?part=snippet&type=video&maxResults=1&q=${encodeURIComponent(
           query
         )}&regionCode=IN&key=${YOUTUBE_API_KEY}${
           pageToken ? `&pageToken=${pageToken}` : ""

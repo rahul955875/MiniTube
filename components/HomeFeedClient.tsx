@@ -8,24 +8,27 @@ import VideoCard from "@/components/VideoCard";
 import useInfiniteScroll from "@/hooks/useInfiniteScroll";
 import { Box } from "@mui/material";
 
-const HomeFeed = () => {
+type Props = {
+  initialVideos: any[];
+  nextPageToken?: string;
+};
+
+const HomeFeedClient = ({ initialVideos, nextPageToken }: Props) => {
   const query = useSelector((state: RootState) => state.search.query);
-  const [videos, setVideos] = useState<any[]>([]);
-  const [pageToken, setPageToken] = useState<string | undefined>(undefined);
-  const [hasMore, setHasMore] = useState(true);
+  const [videos, setVideos] = useState<any[]>(initialVideos || []);
+  const [pageToken, setPageToken] = useState<string | undefined>(nextPageToken);
+  const [hasMore, setHasMore] = useState(Boolean(nextPageToken));
 
-  const lastLoadedPageToken = useRef<string | undefined>(undefined);
+  const lastLoadedPageToken = useRef<string | undefined>(nextPageToken);
 
-  // Query string: use fallback "popular" for home
-  const effectiveQuery = query || "popular";
+  const isDefaultHome = query === "" || query === undefined;
 
-  const {
-    data,
-    isFetching,
-    error,
-  } = useSearchVideosQuery({ query: effectiveQuery, pageToken }, {
-    skip: !hasMore,
-  });
+  const { data, isFetching, error } = useSearchVideosQuery(
+    { query: query || "popular", pageToken },
+    {
+      skip: isDefaultHome && !pageToken, // Skip fetching if on home and already have initialVideos
+    }
+  );
 
   useEffect(() => {
     if (data && data.items) {
@@ -39,12 +42,14 @@ const HomeFeed = () => {
     }
   }, [data, pageToken]);
 
-  // Reset when query changes
+  // Reset videos when query changes
   useEffect(() => {
-    setVideos([]);
-    setPageToken(undefined);
-    setHasMore(true);
-    lastLoadedPageToken.current = undefined;
+    if (!isDefaultHome) {
+      setVideos([]);
+      setPageToken(undefined);
+      setHasMore(true);
+      lastLoadedPageToken.current = undefined;
+    }
   }, [query]);
 
   const handleObserver = useCallback(
@@ -73,9 +78,9 @@ const HomeFeed = () => {
   });
 
   if (error) return <p>Error loading home feed.</p>;
-
+console.log('videosss',videos)
   return (
-    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
       <VideoCard videos={videos} />
       <div ref={observerRef} style={{ height: 20, width: "100%" }} />
       {isFetching && <p>Loading more...</p>}
@@ -83,4 +88,4 @@ const HomeFeed = () => {
   );
 };
 
-export default HomeFeed;
+export default HomeFeedClient;

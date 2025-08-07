@@ -21,13 +21,13 @@ export default function RootLayout({
       <body>
         <ProviderWrapper>
           <Box sx={{ display: "flex" }}>
-            <div style={{ width: "260px" }}>
-              <AppNavBar />
-            </div>
+            <AppNavBar />
 
             <Container style={{ flex: 1, padding: 16 }}>
-              <SearchBar />
-              {children}
+              <Box sx={{ ml: { xs: "80px", sm: "240px" }, p: 2 }}>
+                <SearchBar />
+                {children}
+              </Box>
             </Container>
           </Box>
         </ProviderWrapper>
