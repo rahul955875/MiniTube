@@ -1,4 +1,4 @@
-// app/watch/[id]/page.tsx
+
 import { adaptYouTubeVideo } from "@/adapters/youtubeAdapter";
 import CommentsSection from "@/components/CommentsSection";
 import VideoDescription from "@/components/VideoDescription";
