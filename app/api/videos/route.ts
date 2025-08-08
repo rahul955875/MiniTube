@@ -1,4 +1,5 @@
 import clientPromise from "@/lib/mongodb";
+import { Video } from "@/types/videos";
 
 export async function POST(req: Request) {
   try {
@@ -30,20 +31,25 @@ export async function POST(req: Request) {
   }
 }
 
+
 export async function GET() {
-  try {
-    const client = await clientPromise;
-    const db = client.db("miniTube");
+  const client = await clientPromise;
+  const db = client.db("miniTube");
 
-    const videos = await db
-      .collection("videos")
-      .find({})
-      .sort({ createdAt: -1 })
-      .toArray();
+  // MongoDB returns documents, so we map them to our Video type
+  const videosFromDB = await db.collection("videos").find({}).toArray();
 
-    return Response.json(videos);
-  } catch (err: any) {
-    console.error(err);
-    return Response.json({ error: err.message }, { status: 500 });
-  }
+  const videos: Video[] = videosFromDB.map((v: any) => ({
+    id: v._id.toString(),
+    title: v.title,
+    description: v.description,
+    thumbnailUrl: v.thumbnailUrl,
+    channelTitle: v.channelTitle,
+    views: v.views,
+    createdAt: v.createdAt,
+    source: "local"
+  }));
+
+  return Response.json(videos);
 }
+
