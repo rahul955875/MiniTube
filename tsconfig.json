@@ -33,7 +33,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
-, "hooks/useInfiniteScroll.ts'"  ],
+, "hooks/useInfiniteScroll.ts'", "app/api/test/route.ts", "lib/mongodb.ts"  ],
   "exclude": [
     "node_modules"
   ]
