@@ -26,12 +26,9 @@ export async function POST(req: Request) {
 
     return Response.json({ message: "Video added", id: result.insertedId });
   } catch (err: any) {
-    console.error(err);
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
-
-
 
 export async function GET(request: Request) {
   try {
@@ -75,6 +72,8 @@ export async function GET(request: Request) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+    });
   }
 }
