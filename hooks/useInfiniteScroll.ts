@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useRef, useEffect, useCallback } from "react";
 
 type Config = {
   root?: Element | null;
@@ -14,20 +14,29 @@ const useInfiniteScroll = ({
   observerConfig?: Config;
 }) => {
   const observerRef = useRef<HTMLDivElement | null>(null);
+  const observerInstanceRef = useRef<IntersectionObserver | null>(null);
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(handleObserver, observerConfig);
-
-    const target = observerRef.current;
-    if (target) observer.observe(target);
-
-    return () => {
-      if (target) observer.unobserve(target);
-      observer.disconnect();
-    };
+  const startObserving = useCallback(() => {
+    if (observerRef.current && !observerInstanceRef.current) {
+      const observer = new IntersectionObserver(handleObserver, observerConfig);
+      observer.observe(observerRef.current);
+      observerInstanceRef.current = observer;
+    }
   }, [handleObserver, observerConfig]);
 
-  return observerRef;
+  const stopObserving = useCallback(() => {
+    if (observerInstanceRef.current && observerRef.current) {
+      observerInstanceRef.current.unobserve(observerRef.current);
+      observerInstanceRef.current.disconnect();
+      observerInstanceRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => stopObserving(); // cleanup on unmount
+  }, [stopObserving]);
+
+  return { observerRef, startObserving, stopObserving };
 };
 
 export default useInfiniteScroll;

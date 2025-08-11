@@ -3,84 +3,77 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
-import { useSearchVideosQuery } from "@/store/Apis/youtubeApi";
 import VideoCard from "@/components/VideoCard";
 import useInfiniteScroll from "@/hooks/useInfiniteScroll";
 import { Box } from "@mui/material";
+import { useGetVideosQuery } from "@/store/Apis/videosApi";
 
 type Props = {
-  initialVideos: any[];
-  nextPageToken?: string;
+  initialVideos?: any[];
+  nextPageToken?: string | number;
+  source?: "youtube" | "backend";
 };
 
-const HomeFeedClient = ({ initialVideos, nextPageToken }: Props) => {
+const HomeFeedClient = ({
+  initialVideos = [],
+  nextPageToken,
+  source = "backend",
+}: Props) => {
   const query = useSelector((state: RootState) => state.search.query);
-  const [videos, setVideos] = useState<any[]>(initialVideos || []);
-  const [pageToken, setPageToken] = useState<string | undefined>(nextPageToken);
-  const [hasMore, setHasMore] = useState(Boolean(nextPageToken));
+  const isDefaultHome = !query;
 
-  const lastLoadedPageToken = useRef<string | undefined>(nextPageToken);
+  // Page starts from nextPageToken or 1
+  const [page, setPage] = useState<number>(Number(nextPageToken ?? 1));
+  const [videos, setVideos] = useState<any[]>(initialVideos);
+  const [hasMore, setHasMore] = useState<boolean>(true);
 
-  const isDefaultHome = query === "" || query === undefined;
+  // Track last successfully loaded page
+  const lastLoadedPage = useRef<number>(initialVideos.length ? page : 0);
 
-  const { data, isFetching, error } = useSearchVideosQuery(
-    { query: query || "popular", pageToken },
-    {
-      skip: isDefaultHome && !pageToken, // Skip fetching if on home and already have initialVideos
-    }
+  // Skip first API fetch if initialVideos already cover page 1
+  const shouldSkip =
+    source !== "backend" || (page === 1 && initialVideos.length > 0);
+
+  const { data, isFetching, error } = useGetVideosQuery(
+    { page, limit: 12, q: query || "" },
+    { skip: shouldSkip }
   );
 
-  useEffect(() => {
-    if (data && data.items) {
-      const normalizedItems = data.items.map((item: any) =>
-        item.id.videoId ? { ...item, id: item.id.videoId } : item
-      );
+  console.log("videos==>", data);
+  // Load more when observer triggers
+  const handleObserver = useCallback(() => {
+    if (!hasMore || isFetching) return;
+    setPage((prev) => prev + 1);
+  }, [hasMore, isFetching]);
 
-      setVideos((prev) => [...prev, ...normalizedItems]);
-      setHasMore(Boolean(data.nextPageToken));
-      lastLoadedPageToken.current = pageToken;
-    }
-  }, [data, pageToken]);
-
-  // Reset videos when query changes
-  useEffect(() => {
-    if (!isDefaultHome) {
-      setVideos([]);
-      setPageToken(undefined);
-      setHasMore(true);
-      lastLoadedPageToken.current = undefined;
-    }
-  }, [query]);
-
-  const handleObserver = useCallback(
-    (entries: IntersectionObserverEntry[]) => {
-      const target = entries[0];
-      if (
-        target.isIntersecting &&
-        hasMore &&
-        !isFetching &&
-        data?.nextPageToken &&
-        data?.nextPageToken !== lastLoadedPageToken.current
-      ) {
-        setPageToken(data.nextPageToken);
-      }
-    },
-    [hasMore, isFetching, data?.nextPageToken]
-  );
-
-  const observerRef = useInfiniteScroll({
+  const { observerRef, startObserving } = useInfiniteScroll({
     handleObserver,
-    observerConfig: {
-      root: null,
-      rootMargin: "300px",
-      threshold: 0,
-    },
+    observerConfig: { root: null, rootMargin: "300px", threshold: 0 },
   });
 
-  if (error) return <p>Error loading home feed.</p>;
-console.log('videosss',videos)
+  // Start observing after videos are loaded
+  useEffect(() => {
+    if (!isFetching && videos.length > 0) {
+      startObserving();
+    }
+  }, [isFetching, videos.length, startObserving]);
+
+  // Update videos when new data arrives
+  useEffect(() => {
+    if (source !== "backend" || !data) return;
+
+    const newVideos = data.videos ?? [];
+    setVideos((prev) => (page === 1 ? newVideos : [...prev, ...newVideos]));
+    setHasMore(Boolean(data.nextPage));
+    lastLoadedPage.current = page;
+  }, [data, page, source]);
+
+  if (error && source === "youtube") {
+    return <p>Error loading home feed.</p>;
+  }
+
   return (
-    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <VideoCard videos={videos} />
       <div ref={observerRef} style={{ height: 20, width: "100%" }} />
       {isFetching && <p>Loading more...</p>}
