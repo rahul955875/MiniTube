@@ -32,24 +32,49 @@ export async function POST(req: Request) {
 }
 
 
-export async function GET() {
-  const client = await clientPromise;
-  const db = client.db("miniTube");
 
-  // MongoDB returns documents, so we map them to our Video type
-  const videosFromDB = await db.collection("videos").find({}).toArray();
+export async function GET(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get("page") || "1");
+    const limit = Number(url.searchParams.get("limit") || "12");
+    const query = url.searchParams.get("query") || "";
 
-  const videos: Video[] = videosFromDB.map((v: any) => ({
-    id: v._id.toString(),
-    title: v.title,
-    description: v.description,
-    thumbnailUrl: v.thumbnailUrl,
-    channelTitle: v.channelTitle,
-    views: v.views,
-    createdAt: v.createdAt,
-    source: "local"
-  }));
+    const client = await clientPromise;
+    const db = client.db("miniTube");
 
-  return Response.json(videos);
+    const filter = query ? { title: { $regex: query, $options: "i" } } : {};
+
+    const skip = (page - 1) * limit;
+
+    const [videosRaw, totalCount] = await Promise.all([
+      db
+        .collection("videos")
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
+      db.collection("videos").countDocuments(filter),
+    ]);
+
+    const videos = videosRaw.map((v: any) => ({
+      id: v._id.toString(),
+      title: v.title,
+      description: v.description,
+      thumbnailUrl: v.thumbnailUrl,
+      channelTitle: v.channelTitle,
+      views: v.views ?? 0,
+      createdAt: v.createdAt,
+    }));
+
+    const nextPage = totalCount > page * limit ? page + 1 : null;
+
+    return new Response(JSON.stringify({ videos, nextPage }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+  }
 }
-
